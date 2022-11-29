@@ -59,9 +59,12 @@ def trying(func):
 
 
 @trying
-def save_data(memc_addr: str, key: str, packed: str) -> None:
-    memc = memcache.Client([memc_addr])
-    memc.set(key, packed)
+def save_data(data_for_save: dict[str, dict[str, Any]]) -> None:
+    for memc_addr, srv_data in data_for_save.items():
+        # получаем заранее созданное подключение для каждого сервера
+        if memc := srv_data.get("client"):
+            # записываем все данные
+            memc.set_multi(srv_data.get("data"))
 
 
 def insert_appsinstalled(data, options):
@@ -73,8 +76,14 @@ def insert_appsinstalled(data, options):
     }
 
     dry_run = options.dry
-    results = []
     errors = 0
+    results = True
+    # для того чтобы переиспользовать подключение, создаем подключение к каждому серверу заранее
+    # ниже будем наполнять следующую структуру {"127.0.0.1:33013": {"client": memcache.Client}, "data": {}}
+    data_for_save = {
+        device_memc.get(device): {"client": memcache.Client([server]), "data": {}}
+        for device, server in device_memc.items()
+    }
     for appsinstalled in data:
         memc_addr = device_memc.get(appsinstalled.dev_type)
         if not memc_addr:
@@ -88,17 +97,19 @@ def insert_appsinstalled(data, options):
         key = "%s:%s" % (appsinstalled.dev_type, appsinstalled.dev_id)
         ua.apps.extend(appsinstalled.apps)
         packed = ua.SerializeToString()
-        try:
-            if dry_run:
-                logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
-            else:
-                save_data(memc_addr, key, packed)
-        except Exception as err:
-            logging.exception("Cannot write to memc %s: %s" % (memc_addr, err))
-            results.append(False)
-        results.append(True)
+        if dry_run:
+            logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
+        else:
+            # для каждого сервера наполняем словарь data
+            data_for_save[memc_addr]["data"][key] = packed
 
-    return results, errors
+    try:
+        save_data(data_for_save)
+    except Exception as err:
+        logging.exception("Cannot write to memc: %s" % err)
+        results = False
+
+    return [results], errors
 
 
 def parse_appsinstalled(chunk, *args):
