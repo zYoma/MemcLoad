@@ -245,7 +245,7 @@ def main(options):
                     errors += 1
 
             if not processed:
-                # dot_rename(fn)
+                dot_rename(fn)
                 continue
 
         err_rate = float(errors) / processed
@@ -253,7 +253,7 @@ def main(options):
             logging.info("Acceptable error rate (%s). Successfull load" % err_rate)
         else:
             logging.error("High error rate (%s > %s). Failed load" % (err_rate, NORMAL_ERR_RATE))
-        # dot_rename(fn)
+        dot_rename(fn)
 
 
 def prototest():
