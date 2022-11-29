@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "memcload"
+version = "0.1.0"
+description = ""
+authors = ["Зимин Николай <Nikola.Zimin@x5.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+protobuf = "^4.21.9"
+python-memcached = "^1.59"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
